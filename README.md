@@ -1,3 +1,5 @@
+#Touhou Homage Linker (TOHO-Link)
+
 TOHO-Link is a fan-created tool designed to seamlessly connect Touhou cover songs with their original compositions in your plex instance, leverageing collections.
 
 
@@ -17,18 +19,6 @@ Installation
 
 
 git clone https://github.com/yourusername/TOHO-Link.git
-
-Navigate to the TOHO-Link directory.
-
-
-
-cd TOHO-Link
-
-Install the required Python libraries.
-
-
-
-    pip install -r requirements.txt
 
 Usage
 
