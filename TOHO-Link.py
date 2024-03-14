@@ -2,7 +2,9 @@ import sqlite3
 
 from plexapi.server import PlexServer
 from colorama import Fore, Style
+from configs import TOHO_config
 
+_configs = TOHO_config.configimport()
 class TouhouMusicDB:
     def __init__(self, db_path):
         self.conn = sqlite3.connect(db_path)
@@ -50,12 +52,6 @@ class PlexMusicManager:
         else:
             print(Fore.RED + "Track not found, cannot add to collection." + Style.RESET_ALL)
 
-# Example usage:
-# baseurl = 'http://your-plex-server:32400'
-# token = 'YourPlexToken'
-# plex_manager = PlexMusicManager(baseurl, token)
-# track = plex_manager.find_track("Track Name")
-# plex_manager.add_track_to_collection(track, "Source Track Collection")
 
 from colorama import init
 
@@ -94,8 +90,13 @@ def process_music_library(plex_baseurl, plex_token, db_path):
         print(Fore.GREEN + "Process completed." + Style.RESET_ALL)
 
 
-# Example usage
-plex_baseurl = 'http://Plex Server:32400'
-plex_token = 'Plex Token'
-db_path = 'touhou-music.db'
-
+print(f"""
++--------------------------------------------------+
++Starting 2hu matching agent      
++{_configs.plex_baseurl}
++{_configs.plex_token}
++{_configs.db_path}      
++--------------------------------------------------+  """)
+start=input("Starty?")
+if start:
+    process_music_library(_configs.plex_baseurl,_configs.plex_token,_configs.db_path)
