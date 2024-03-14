@@ -2,8 +2,7 @@ import sqlite3
 from plexapi.server import PlexServer
 from colorama import Fore, Style, init
 from configs import TOHO_config
-from concurrent.futures import ThreadPoolExecutor
-# Initialize Colorama for colored output
+import concurrent.futures# Initialize Colorama for colored output
 init(autoreset=True)
 
 _configs = TOHO_config.configimport()
@@ -53,31 +52,42 @@ class PlexMusicManager:
         track.addCollection(collection_name)
         print(Fore.GREEN + f"Added '{track.title}' to collection: '{collection_name}'." + Style.RESET_ALL)
 
-def process_music_library(plex_baseurl, plex_token, db_path):
-    print(Fore.BLUE + "Initializing Plex and Touhou Music Database connections..." + Style.RESET_ALL)
-    plex_manager = PlexMusicManager(plex_baseurl, plex_token)
+
+def process_track(db_path, plex_manager, track):
+    # Create a new database connection for each thread
     touhou_db = TouhouMusicDB(db_path)
-
     try:
-        print(Fore.BLUE + "Fetching all music tracks from Plex..." + Style.RESET_ALL)
-        all_tracks = plex_manager.get_all_music()
-        print(Fore.GREEN + f"Total tracks fetched: {len(all_tracks)}" + Style.RESET_ALL)
-
-        for track in all_tracks:
-            artist_name = track.grandparentTitle  # Assuming 'grandparentTitle' holds the artist's name
-            print(Fore.CYAN + f"Processing '{track.title}' by '{artist_name}'..." + Style.RESET_ALL)
-            source_song_name = touhou_db.find_matching_song(track.title, artist_name)
-            
-            if source_song_name:
-                print(Fore.YELLOW + f"Potential match found: '{track.title}' -> '{source_song_name}'." + Style.RESET_ALL)
-                plex_manager.add_track_to_matched_collection(track, source_song_name)
-            else:
-                print(Fore.RED + f"No source found or multiple sources found for '{track.title}'. Skipped." + Style.RESET_ALL)
-    except Exception as e:
-        print(Fore.RED + f"An error occurred: {e}" + Style.RESET_ALL)
+        artist_name = track.grandparentTitle
+        source_song_name = touhou_db.find_matching_song(track.title, artist_name)
+        if source_song_name:
+            print(Fore.YELLOW + f"Match found for '{track.title}': '{source_song_name}'." + Style.RESET_ALL)
+            plex_manager.add_track_to_matched_collection(track, source_song_name)
+        else:
+            print(Fore.RED + f"No match found for '{track.title}'." + Style.RESET_ALL)
     finally:
-        touhou_db.close()
-        print(Fore.GREEN + "Process completed." + Style.RESET_ALL)
+        touhou_db.close()  # Ensure the database connection is closed properly
+
+def process_music_library(plex_baseurl, plex_token, db_path):
+    print(Fore.BLUE + "Initializing Plex Music Database connection..." + Style.RESET_ALL)
+    plex_manager = PlexMusicManager(plex_baseurl, plex_token)
+    print(Fore.BLUE + "Fetching all music tracks from Plex..." + Style.RESET_ALL)
+    all_tracks = plex_manager.get_all_music()
+    print(Fore.GREEN + f"Total tracks fetched: {len(all_tracks)}" + Style.RESET_ALL)
+
+    # Use ThreadPoolExecutor to process tracks in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        # Submit each track to the executor
+        futures = [executor.submit(process_track, db_path, plex_manager, track) for track in all_tracks]
+        
+        # Process the results as they are completed
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                # Result is None for this function, but you might want to handle exceptions
+                future.result()
+            except Exception as exc:
+                print(f"A track processing generated an exception: {exc}")
+
+    print(Fore.GREEN + "Process completed." + Style.RESET_ALL)
 
 print(f"""
 +--------------------------------------------------+
